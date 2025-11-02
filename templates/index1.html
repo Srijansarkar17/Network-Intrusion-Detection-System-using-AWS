@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fully Integrated IDS - Real SageMaker + Mistral</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .connection-status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            margin: 5px;
+        }
+
+        .status-connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .alert {
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            animation: slideIn 0.5s ease;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #28a745;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #dc3545;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 2px solid #17a2b8;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .ai-response {
+            background: #f9f9f9;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
+        .ai-response h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .scenario-btn {
+            padding: 15px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin: 5px;
+            width: calc(50% - 10px);
+        }
+
+        .scenario-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin: 10px 0;
+        }
+
+        .badge-normal {
+            background: #28a745;
+            color: white;
+        }
+
+        .badge-attack {
+            background: #dc3545;
+            color: white;
+        }
+
+        .detection-summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .detection-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .detail-item {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .detail-item strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .status-row {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ Fully Integrated IDS System</h1>
+            <p>Real SageMaker ML Model + Mistral AI Analysis</p>
+            <div class="status-row">
+                <div id="sagemakerStatus" class="connection-status status-disconnected">
+                    ⚠️ SageMaker: Not Tested
+                </div>
+                <div id="mistralStatus" class="connection-status status-disconnected">
+                    ⚠️ Mistral: Not Tested
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🔧 Backend Configuration</h2>
+            <input type="text" id="backendUrl" value="http://localhost:5000" 
+                   placeholder="http://localhost:5000" 
+                   style="width: 100%; padding: 10px; border: 2px solid #667eea; border-radius: 8px; margin-bottom: 10px;">
+            <button class="btn btn-primary" onclick="testConnections()">
+                🔌 Test All Connections (SageMaker + Mistral)
+            </button>
+        </div>
+
+        <div class="card">
+            <h2>📊 Quick Test Scenarios (Real SageMaker Predictions)</h2>
+            <p style="color: #666; margin-bottom: 15px;">
+                ⚠️ These will make REAL API calls to SageMaker for prediction, then use Mistral for analysis
+            </p>
+            <div class="action-buttons">
+                <button class="scenario-btn" onclick="testRealAttack('dos')">
+                    💥 Test DoS Attack (Real SageMaker)
+                </button>
+                <button class="scenario-btn" onclick="testRealAttack('probe')">
+                    🔍 Test Probe Attack (Real SageMaker)
+                </button>
+                <button class="scenario-btn" onclick="testRealAttack('r2l')">
+                    🚪 Test R2L Attack (Real SageMaker)
+                </button>
+                <button class="scenario-btn" onclick="testRealAttack('normal')">
+                    ✅ Test Normal Traffic (Real SageMaker)
+                </button>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p id="loadingText" style="margin-top: 15px; color: #667eea; font-weight: 600;">
+                Processing...
+            </p>
+        </div>
+
+        <div class="card" id="resultsCard" style="display: none;">
+            <h2>📋 Detection Results from SageMaker</h2>
+            <div id="detectionSummary"></div>
+            
+            <div class="action-buttons">
+                <button class="btn btn-success" onclick="getAIAnalysis()">
+                    🧠 Get Mistral AI Analysis
+                </button>
+                <button class="btn btn-warning" onclick="getRemediation()">
+                    🛠️ Get Mistral Remediation Plan
+                </button>
+            </div>
+
+            <div id="aiAnalysis"></div>
+            <div id="remediation"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentDetection = null;
+        let backendConnected = false;
+
+        // Real feature sets for different attack types (41 features)
+        const realScenarios = {
+            'dos': [
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+                511, 511, 1.0, 1.0, 0, 0, 1.0, 0, 0, 
+                255, 255, 1.0, 0, 1.0, 0, 1.0, 1.0, 0, 0,
+                6, 2, 0, 0, 0, 0, 0  // service, protocol, flag, land, logged_in, etc.
+            ],
+            'probe': [
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                231, 9, 1.0, 1.0, 0, 0, 0.04, 0.06, 0,
+                255, 30, 0.12, 0.06, 0, 0, 1.0, 1.0, 0, 0,
+                5, 0, 1, 0, 0, 0, 0
+            ],
+            'r2l': [
+                18, 318, 1295, 0, 0, 3, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+                2, 2, 0, 0, 0, 0, 1.0, 0, 0,
+                48, 23, 0.48, 0.02, 0.13, 0.04, 0, 0, 0.04, 0.09,
+                2, 0, 0, 0, 0, 0, 0
+            ],
+            'normal': [
+                0, 232, 8153, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                5, 5, 0, 0, 0, 0, 1.0, 0, 0,
+                30, 255, 1.0, 0, 0.03, 0.04, 0, 0, 0, 0,
+                1, 0, 0, 0, 1, 0, 0
+            ]
+        };
+
+        async function testConnections() {
+            const backendUrl = document.getElementById('backendUrl').value;
+            
+            // Test SageMaker
+            document.getElementById('sagemakerStatus').textContent = '⏳ Testing SageMaker...';
+            document.getElementById('mistralStatus').textContent = '⏳ Testing Mistral...';
+            
+            try {
+                // Test backend health
+                const healthResponse = await fetch(`${backendUrl}/health`);
+                const health = await healthResponse.json();
+                
+                document.getElementById('sagemakerStatus').textContent = 
+                    `✅ SageMaker: ${health.sagemaker_endpoint}`;
+                document.getElementById('sagemakerStatus').className = 
+                    'connection-status status-connected';
+                
+                // Test Mistral
+                const mistralResponse = await fetch(`${backendUrl}/test-mistral`);
+                const mistral = await mistralResponse.json();
+                
+                if (mistral.status === 'success') {
+                    document.getElementById('mistralStatus').textContent = 
+                        `✅ Mistral: ${health.bedrock_model}`;
+                    document.getElementById('mistralStatus').className = 
+                        'connection-status status-connected';
+                    
+                    alert(`✅ All Systems Connected!\n\n` +
+                          `SageMaker Endpoint: ${health.sagemaker_endpoint}\n` +
+                          `Mistral Model: ${health.bedrock_model}\n` +
+                          `Region: ${health.region}\n\n` +
+                          `Mistral Test Response:\n"${mistral.test_response}"`);
+                    
+                    backendConnected = true;
+                } else {
+                    throw new Error('Mistral test failed');
+                }
+                
+            } catch (error) {
+                document.getElementById('sagemakerStatus').textContent = '❌ SageMaker: Failed';
+                document.getElementById('mistralStatus').textContent = '❌ Mistral: Failed';
+                alert(`❌ Connection Failed!\n\nError: ${error.message}\n\n` +
+                      `Make sure:\n1. Flask backend is running\n2. AWS credentials are configured\n` +
+                      `3. SageMaker endpoint exists\n4. Bedrock Mistral access is enabled`);
+            }
+        }
+
+        async function testRealAttack(attackType) {
+            if (!backendConnected) {
+                const confirm = window.confirm(
+                    'Backend not tested. Continue anyway?\n\n' +
+                    'Click OK to proceed or Cancel to test connection first.'
+                );
+                if (!confirm) {
+                    testConnections();
+                    return;
+                }
+            }
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('loadingText').textContent = 
+                '🔄 Step 1/2: Sending to SageMaker for prediction...';
+            document.getElementById('resultsCard').style.display = 'none';
+            
+            try {
+                const backendUrl = document.getElementById('backendUrl').value;
+                const features = realScenarios[attackType];
+                
+                console.log(`📡 Sending ${features.length} features to SageMaker...`);
+                
+                // REAL API CALL TO SAGEMAKER via Flask backend
+                const response = await fetch(`${backendUrl}/predict`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ features: features })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`SageMaker request failed: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('✅ SageMaker Response:', result);
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                
+                // Store the REAL detection result
+                currentDetection = {
+                    attack_type: result.prediction,
+                    category: result.category,
+                    confidence: result.confidence,
+                    is_attack: result.is_attack,
+                    attack_label: result.attack_label,
+                    features: extractFeatureDetails(features),
+                    raw_sagemaker_response: result.raw_response
+                };
+                
+                displayRealDetection();
+                
+            } catch (error) {
+                console.error('❌ Error:', error);
+                document.getElementById('loading').style.display = 'none';
+                alert(`Error during prediction:\n\n${error.message}\n\n` +
+                      `Check:\n1. SageMaker endpoint is deployed\n` +
+                      `2. Backend has correct permissions\n3. Feature count is correct (41)`);
+            }
+        }
+
+        function extractFeatureDetails(features) {
+            // Extract key features from the array
+            return {
+                protocol_type: ['tcp', 'udp', 'icmp'][features[35]] || 'tcp',
+                service: ['http', 'ftp', 'smtp', 'ssh', 'telnet', 'ftp_data', 'other'][features[34]] || 'http',
+                src_bytes: features[1],
+                dst_bytes: features[2],
+                count: features[15],
+                serror_rate: features[17],
+                logged_in: features[38] === 1 ? '1' : '0'
+            };
+        }
+
+        function displayRealDetection() {
+            const summaryDiv = document.getElementById('detectionSummary');
+            const isAttack = currentDetection.is_attack;
+            
+            summaryDiv.innerHTML = `
+                <div class="alert alert-info">
+                    ✅ <strong>REAL PREDICTION FROM SAGEMAKER MODEL</strong><br>
+                    Endpoint: canvas-nsl-kdddeploy
+                </div>
+                
+                <div class="detection-summary">
+                    <h3>${isAttack ? '🚨 ATTACK DETECTED!' : '✅ NORMAL TRAFFIC'}</h3>
+                    <div class="badge ${isAttack ? 'badge-attack' : 'badge-normal'}">
+                        ${currentDetection.attack_type.toUpperCase()}
+                    </div>
+                    <div class="detection-details">
+                        <div class="detail-item">
+                            <strong>Attack Type:</strong>
+                            ${currentDetection.attack_type}
+                        </div>
+                        <div class="detail-item">
+                            <strong>Category:</strong>
+                            ${currentDetection.category}
+                        </div>
+                        <div class="detail-item">
+                            <strong>Attack Label:</strong>
+                            ${currentDetection.attack_label}
+                        </div>
+                        <div class="detail-item">
+                            <strong>Confidence:</strong>
+                            ${(currentDetection.confidence * 100).toFixed(2)}%
+                        </div>
+                        <div class="detail-item">
+                            <strong>Protocol:</strong>
+                            ${currentDetection.features.protocol_type}
+                        </div>
+                        <div class="detail-item">
+                            <strong>Service:</strong>
+                            ${currentDetection.features.service}
+                        </div>
+                        <div class="detail-item">
+                            <strong>Source Bytes:</strong>
+                            ${currentDetection.features.src_bytes}
+                        </div>
+                        <div class="detail-item">
+                            <strong>Destination Bytes:</strong>
+                            ${currentDetection.features.dst_bytes}
+                        </div>
+                        <div class="detail-item">
+                            <strong>Connection Count:</strong>
+                            ${currentDetection.features.count}
+                        </div>
+                        <div class="detail-item">
+                            <strong>Error Rate:</strong>
+                            ${currentDetection.features.serror_rate}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-success">
+                    <strong>✨ Next Steps:</strong> Click the buttons below to get AI-powered analysis and remediation 
+                    suggestions from <strong>Mistral 7B</strong> based on this REAL SageMaker detection!
+                </div>
+            `;
+            
+            document.getElementById('resultsCard').style.display = 'block';
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('aiAnalysis').innerHTML = '';
+            document.getElementById('remediation').innerHTML = '';
+            
+            // Scroll to results
+            document.getElementById('resultsCard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function getAIAnalysis() {
+            if (!currentDetection) {
+                alert('Please run a test scenario first!');
+                return;
+            }
+            
+            const analysisDiv = document.getElementById('aiAnalysis');
+            analysisDiv.innerHTML = `
+                <div class="loading" style="display: block;">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 15px; color: #667eea; font-weight: 600;">
+                        🤖 Mistral AI is analyzing the SageMaker detection result...
+                    </p>
+                </div>
+            `;
+            
+            try {
+                const backendUrl = document.getElementById('backendUrl').value;
+                
+                console.log('📤 Sending to Mistral for analysis...');
+                
+                // REAL API CALL TO MISTRAL via Flask backend
+                const response = await fetch(`${backendUrl}/ai-analysis`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        attack_type: currentDetection.attack_type,
+                        category: currentDetection.category,
+                        confidence: currentDetection.confidence,
+                        features: currentDetection.features
+                    })
+                });
+                
+                const result = await response.json();
+                console.log('✅ Mistral Analysis Response:', result);
+                
+                if (result.status === 'success') {
+                    analysisDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            ✅ <strong>REAL RESPONSE FROM MISTRAL 7B MODEL</strong>
+                        </div>
+                        <div class="ai-response">
+                            <h3>🧠 Mistral AI Analysis</h3>
+                            ${result.analysis}
+                        </div>
+                    `;
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                console.error('❌ Mistral Error:', error);
+                analysisDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        ❌ Error getting AI analysis: ${error.message}<br><br>
+                        Check: AWS Bedrock access and Mistral model availability
+                    </div>
+                `;
+            }
+        }
+
+        async function getRemediation() {
+            if (!currentDetection) {
+                alert('Please run a test scenario first!');
+                return;
+            }
+            
+            const remediationDiv = document.getElementById('remediation');
+            remediationDiv.innerHTML = `
+                <div class="loading" style="display: block;">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 15px; color: #667eea; font-weight: 600;">
+                        🤖 Mistral AI is generating remediation plan...
+                    </p>
+                </div>
+            `;
+            
+            try {
+                const backendUrl = document.getElementById('backendUrl').value;
+                
+                console.log('📤 Sending to Mistral for remediation plan...');
+                
+                // REAL API CALL TO MISTRAL via Flask backend
+                const response = await fetch(`${backendUrl}/ai-remediation`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        attack_type: currentDetection.attack_type,
+                        category: currentDetection.category,
+                        features: currentDetection.features
+                    })
+                });
+                
+                const result = await response.json();
+                console.log('✅ Mistral Remediation Response:', result);
+                
+                if (result.status === 'success') {
+                    remediationDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            ✅ <strong>REAL RESPONSE FROM MISTRAL 7B MODEL</strong>
+                        </div>
+                        <div class="ai-response">
+                            <h3>🛠️ Mistral AI Remediation Plan</h3>
+                            ${result.remediation_plan}
+                        </div>
+                    `;
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                console.error('❌ Mistral Error:', error);
+                remediationDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        ❌ Error getting remediation plan: ${error.message}<br><br>
+                        Check: AWS Bedrock access and Mistral model availability
+                    </div>
+                `;
+            }
+        }
+
+        window.onload = function() {
+            console.log('🛡️ Fully Integrated IDS Dashboard Loaded');
+            console.log('📡 Ready to make REAL API calls to SageMaker + Mistral');
+        };
+    </script>
+</body>
+</html>
