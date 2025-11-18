@@ -274,9 +274,6 @@ export BEDROCK_MODEL_ID=mistral.mistral-7b-instruct-v0:2
 - **Prediction Latency**: < 100ms (average)
 - **Supported Throughput**: Scalable based on SageMaker instance
 
-## 👥 Contributors
-
-Add your team members here.
 
 ## 📄 License
 
@@ -292,8 +289,6 @@ Specify your license here.
 
 For issues and questions:
 - Open an issue on GitHub
-- Contact: [your-email]
+- Contact: srijanb463@gmail.com
 
 ---
-
-**Built with ❤️ using AWS and Machine Learning**
